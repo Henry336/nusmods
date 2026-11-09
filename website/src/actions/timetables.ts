@@ -1,4 +1,4 @@
-import { each, flatMap, get, keys, mapValues, pickBy } from 'lodash-es';
+import { each, flatMap, get, keys, mapValues, pickBy, size } from 'lodash-es';
 
 import type {
   ColorIndex,
@@ -235,6 +235,24 @@ export function setTimetable(
  */
 export function validateTimetable(semester: Semester) {
   return (dispatch: Dispatch, getState: GetState) => {
+    // Remove courses that are no longer in this year's course list, e.g. deleted by the faculty.
+    // An empty list means it has not loaded, so skip instead of wiping the whole timetable.
+    const { moduleCodes } = getState().moduleBank;
+    if (size(moduleCodes)) {
+      const [, removedModules] = validateTimetableModules(
+        getState().timetables.lessons[semester] ?? {},
+        moduleCodes,
+      );
+      removedModules.forEach((moduleCode) => dispatch(removeModule(semester, moduleCode)));
+      if (removedModules.length) {
+        dispatch(
+          openNotification(
+            `Removed courses that are no longer available: ${removedModules.join(', ')}`,
+          ),
+        );
+      }
+    }
+
     const { timetables, moduleBank } = getState();
 
     const timetableConfig: TimetableConfig | TimetableConfigV2 | TimetableConfigV1 =

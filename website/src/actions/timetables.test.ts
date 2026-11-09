@@ -400,6 +400,49 @@ describe('fillTimetableBlanks', () => {
     action(dispatch, () => state);
     expect(dispatch).not.toThrow(TypeError);
   });
+
+  test('remove modules that are no longer in the module list', () => {
+    const timetable: SemTimetableConfig = {
+      CS1010S: {
+        Lecture: ['1'],
+        Recitation: ['2'],
+        Tutorial: ['3'],
+      },
+      DELETED1: { Tutorial: ['1'] },
+    };
+    const state: any = {
+      timetables: timetablesState(timetable),
+      moduleBank: { ...moduleBank, moduleCodes: { CS1010S: {} } },
+    };
+    const dispatch = jest.fn();
+    action(dispatch, () => state);
+
+    expect(dispatch).toHaveBeenCalledWith(actions.removeModule(semester, 'DELETED1'));
+    expect(dispatch).not.toHaveBeenCalledWith(actions.removeModule(semester, 'CS1010S'));
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: OPEN_NOTIFICATION,
+        payload: expect.objectContaining({ message: expect.stringContaining('DELETED1') }),
+      }),
+    );
+  });
+
+  test('do not remove modules when the module list is empty', () => {
+    const timetable: SemTimetableConfig = {
+      CS1010S: {
+        Lecture: ['1'],
+        Recitation: ['2'],
+        Tutorial: ['3'],
+      },
+    };
+    const state: any = {
+      timetables: timetablesState(timetable),
+      moduleBank: { ...moduleBank, moduleCodes: {} },
+    };
+    const dispatch = jest.fn();
+    action(dispatch, () => state);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
 });
 
 describe('hide/show timetable modules', () => {
